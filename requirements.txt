@@ -1,0 +1,19 @@
+fastapi==0.115.0
+uvicorn==0.30.0
+pydantic==2.7.0
+python-dotenv==1.0.1
+httpx==0.27.0
+websockets==12.0
+
+# 2주차에 추가 예정
+# qdrant-client
+# sentence-transformers
+# pymupdf
+# langchain
+# langchain-community
+
+# 4주차에 추가 예정
+# neo4j
+
+# 6주차에 추가 예정
+# ragas
