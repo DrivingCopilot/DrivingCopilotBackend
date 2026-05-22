@@ -1,9 +1,12 @@
+import sqlite3
+import json
 from typing import Annotated, Literal
 
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
 from app.services import vehicle as vehicle_service
+from app.database import init_db
 
 mcp = FastMCP(name="vehicle-tools")
 
@@ -175,6 +178,25 @@ async def query_dashboard(
         return "켜진 경고등이 없습니다."
     return f"켜진 경고등: {', '.join(s.warning_lights)}"
 
+@mcp.tool()
+async def execute_db(
+        query: Annotated[str,Field(description="실행할 SQL 쿼리")],
+) -> str:
+    """LLM의 쿼리를 실행하여 결과를 반환한다."""
+    con = sqlite3.connect("vehicle_data.db")
+    cursor = con.cursor()
+    try:
+        cursor.execute(query)
+        if query.strip().upper().startswith("SELECT"):
+            rows = cursor.fetchall()
+            return json.dumps(rows, default=str)
+        else:
+            con.commit()
+            return "성공적으로 쿼리가 실행되었습니다."
+    except Exception as e:
+        return f"오류가 발생했습니다: {str(e)}"
+    finally:
+        con.close()
 
 if __name__ == "__main__":
     mcp.run()

@@ -33,3 +33,6 @@ Thumbs.db
 # Environment variables
 .env.local
 .env.*.local
+
+Driving_Copilot_Plan.md
+Intern_Project_Plan.md
