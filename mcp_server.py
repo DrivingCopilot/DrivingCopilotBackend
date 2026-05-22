@@ -180,16 +180,18 @@ async def query_dashboard(
 
 @mcp.tool()
 async def execute_db(
-        query: Annotated[str,Field(description="실행할 SQL 쿼리")],
+    query: Annotated[str, Field(description="실행할 SQL 쿼리")],
 ) -> str:
     """LLM의 쿼리를 실행하여 결과를 반환한다."""
-    con = sqlite3.connect("vehicle_data.db")
+    con = sqlite3.connect(DB_PATH)
+    con.row_factory = sqlite3.Row  # 컬럼명을 포함한 딕셔너리 형태로 결과를 반환하기 위해 설정
     cursor = con.cursor()
     try:
         cursor.execute(query)
-        if query.strip().upper().startswith("SELECT"):
+        if cursor.description:  # 결과가 반환되는 쿼리인지 확인 (SELECT, PRAGMA 등)
             rows = cursor.fetchall()
-            return json.dumps(rows, default=str)
+            result = [dict(row) for row in rows]
+            return json.dumps(result, default=str, ensure_ascii=False)
         else:
             con.commit()
             return "성공적으로 쿼리가 실행되었습니다."
