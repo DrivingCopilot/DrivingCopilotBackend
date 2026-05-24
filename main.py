@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import vehicle, rag, tools
+from app.routers import vehicle, rag, tools, chat
 from app.services.query_router import warmup as router_warmup
 
 
@@ -32,6 +32,7 @@ app.add_middleware(
 app.include_router(vehicle.router, tags=["Vehicle"])
 app.include_router(rag.router, prefix="/rag", tags=["RAG"])
 app.include_router(tools.router, tags=["Tools"])
+app.include_router(chat.router, tags=["Chat"])
 
 
 @app.get("/")
