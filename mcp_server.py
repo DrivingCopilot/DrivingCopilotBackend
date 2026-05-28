@@ -1,14 +1,22 @@
 import sqlite3
 import json
+from contextlib import asynccontextmanager
 from typing import Annotated, Literal
 
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
 from app.services import vehicle as vehicle_service
-from app.database import init_db
+from app.database import init_db, DB_PATH
 
-mcp = FastMCP(name="vehicle-tools")
+
+@asynccontextmanager
+async def lifespan(server: FastMCP):
+    init_db()
+    yield
+
+
+mcp = FastMCP(name="vehicle-tools", lifespan=lifespan)
 
 
 # ---- 1) 에어컨 / 히터 ----
@@ -180,21 +188,21 @@ async def query_dashboard(
 
 @mcp.tool()
 async def execute_db(
-    query: Annotated[str, Field(description="실행할 SQL 쿼리")],
+    query: Annotated[str, Field(description="실행할 SQL 쿼리 (SELECT/PRAGMA/WITH만 허용)")],
 ) -> str:
-    """LLM의 쿼리를 실행하여 결과를 반환한다."""
-    con = sqlite3.connect(DB_PATH)
-    con.row_factory = sqlite3.Row  # 컬럼명을 포함한 딕셔너리 형태로 결과를 반환하기 위해 설정
+    """데이터베이스에서 읽기 전용 쿼리를 실행하여 결과를 반환한다."""
+    query_stripped = query.strip().upper()
+    if not query_stripped.startswith(("SELECT", "PRAGMA", "WITH")):
+        return "오류: 읽기 전용 쿼리(SELECT/PRAGMA/WITH)만 허용됩니다."
+
+    con = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+    con.row_factory = sqlite3.Row
     cursor = con.cursor()
     try:
         cursor.execute(query)
-        if cursor.description:  # 결과가 반환되는 쿼리인지 확인 (SELECT, PRAGMA 등)
-            rows = cursor.fetchall()
-            result = [dict(row) for row in rows]
-            return json.dumps(result, default=str, ensure_ascii=False)
-        else:
-            con.commit()
-            return "성공적으로 쿼리가 실행되었습니다."
+        rows = cursor.fetchall() if cursor.description else []
+        result = [dict(row) for row in rows]
+        return json.dumps(result, default=str, ensure_ascii=False)
     except Exception as e:
         return f"오류가 발생했습니다: {str(e)}"
     finally:
