@@ -1,6 +1,8 @@
+import base64
 import sqlite3
 import json
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Annotated, Literal
 
 from mcp.server.fastmcp import FastMCP
@@ -8,6 +10,10 @@ from pydantic import Field
 
 from app.services import vehicle as vehicle_service
 from app.database import init_db, DB_PATH
+
+# 실제 카메라 하드웨어 연동 전 단계의 stub 프레임.
+# 추후 실 카메라 연동 시 이 파일 읽기 부분만 교체하면 된다.
+_CAMERA_STUB_FRAME = Path(__file__).parent / "data" / "camera_stub" / "sample_frame.jpg"
 
 
 @asynccontextmanager
@@ -185,6 +191,17 @@ async def query_dashboard(
     if not s.warning_lights:
         return "켜진 경고등이 없습니다."
     return f"켜진 경고등: {', '.join(s.warning_lights)}"
+
+# ---- 13) 카메라 프레임 조회 (Perception Agent 연동용) ----
+@mcp.tool()
+async def get_camera_frame(
+    camera_id: Annotated[str, Field(description="카메라 식별자 (예: front, rear)")] = "front",
+) -> str:
+    """현재 카메라 프레임을 base64 인코딩된 JPEG 문자열로 반환한다."""
+    if not _CAMERA_STUB_FRAME.exists():
+        return "오류: 카메라 프레임을 가져올 수 없습니다."
+    return base64.b64encode(_CAMERA_STUB_FRAME.read_bytes()).decode("ascii")
+
 
 @mcp.tool()
 async def execute_db(
