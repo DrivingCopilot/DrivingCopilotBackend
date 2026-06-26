@@ -5,6 +5,8 @@ python-dotenv==1.0.1
 httpx==0.28.1
 websockets==12.0
 mcp[cli]>=1.27.0
+scikit-learn>=1.4.0
+numpy>=1.26.0
 
 # 2주차에 추가 예정
 # qdrant-client

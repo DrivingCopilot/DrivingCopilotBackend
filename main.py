@@ -1,11 +1,22 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import vehicle, rag, tools, chat
+from app.services.query_router import warmup as router_warmup
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 앱 시작 시 TF-IDF 모델 워밍업 (첫 요청 지연 방지)
+    router_warmup()
+    yield
 
 app = FastAPI(
     title="Driving Copilot API",
     description="On-Device Multimodal Driving Copilot Backend",
-    version="0.1.0"
+    version="0.1.0",
+    lifespan=lifespan,
 )
 
 # CORS 설정 (React 프론트엔드 연결용)
