@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import json
 from contextlib import asynccontextmanager
@@ -19,7 +20,15 @@ async def lifespan(server: FastMCP):
     yield
 
 
-mcp = FastMCP(name="vehicle-tools", lifespan=lifespan)
+# Transport: streamable-http(상주 HTTP 서버). host/port는 환경변수로 override.
+# 기본 엔드포인트: http://{MCP_HOST}:{MCP_PORT}/mcp
+# Backend FastAPI(REST)가 8000을 사용하므로 MCP 서버 기본 포트는 9000으로 분리.
+mcp = FastMCP(
+    name="vehicle-tools",
+    lifespan=lifespan,
+    host=os.getenv("MCP_HOST", "0.0.0.0"),
+    port=int(os.getenv("MCP_PORT", "9000")),
+)
 
 
 # ---- 1) 에어컨 / 히터 ----
@@ -243,4 +252,5 @@ async def graph_rag_search(
 
 
 if __name__ == "__main__":
-    mcp.run()
+    # stdio → streamable-http 전환. Agent 측 mcp_client.py도 streamablehttp_client로 변경 필요.
+    mcp.run(transport="streamable-http")
