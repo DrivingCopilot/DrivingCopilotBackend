@@ -5,6 +5,8 @@ python-dotenv==1.0.1
 httpx==0.28.1
 websockets==12.0
 mcp[cli]>=1.27.0
+scikit-learn>=1.4.0
+numpy>=1.26.0
 
 # Knowledge tools (text_to_sql_query / vector_rag_search / graph_rag_search)
 # langchain 스택은 0.2 라인으로 고정 — core>=0.3로 올라가면 기존 조합이 깨짐

@@ -1,7 +1,7 @@
 # app/routers/chat.py
 #
 # Frontend(3000) ↔ Backend(8000) ↔ Supervisor Agent(8001) 사이의 WebSocket relay.
-# - 사용자 발화를 supervisor 의 /ws 로 전달
+# - 사용자 발화를 Query Router로 1차 분류한 뒤 supervisor 의 /ws 로 전달
 # - supervisor 가 송출하는 토큰 스트림(text/tool_start/tool_result/done)을 그대로 Frontend 로 forward
 # - 보조 타입(status)은 Backend 에서 필터하여 Frontend 로 전달하지 않음
 # - turn-level 30 초 타임아웃으로 supervisor hang 안전망
@@ -13,6 +13,8 @@ import os
 
 import websockets
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
+from app.services.query_router import classify_query
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +55,27 @@ async def chat_ws(websocket: WebSocket) -> None:
             except WebSocketDisconnect:
                 break
 
+            # Query Router: 발화를 분류하고 route_type을 supervisor hint로 전달
+            # has_image는 향후 프론트엔드가 {"text": ..., "has_image": true} JSON을
+            # 보내도록 확장되면 파싱 로직 추가 예정. 현재는 텍스트 전용.
             try:
-                await upstream.send(json.dumps({"query": message}))
+                route_result = classify_query(message, has_image=False)
+                route_type = route_result["route_type"]
+                logger.debug(
+                    "route_result: query=%r → %s (confidence=%.2f, method=%s)",
+                    message,
+                    route_type,
+                    route_result["confidence"],
+                    route_result["method"],
+                )
+            except Exception:
+                logger.exception("query router failed; falling back to empty route_type")
+                route_type = ""
+
+            try:
+                await upstream.send(
+                    json.dumps({"query": message, "route_type": route_type})
+                )
             except Exception:
                 logger.exception("upstream send failed")
                 await _send_done(websocket, reason="upstream_send_error")
