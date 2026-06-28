@@ -6,15 +6,20 @@ httpx==0.28.1
 websockets==12.0
 mcp[cli]>=1.27.0
 
-# 2주차에 추가 예정
-# qdrant-client
-# sentence-transformers
-# pymupdf
-# langchain
-# langchain-community
+# Knowledge tools (text_to_sql_query / vector_rag_search / graph_rag_search)
+# langchain 스택은 0.2 라인으로 고정 — core>=0.3로 올라가면 기존 조합이 깨짐
+langchain==0.2.17
+langchain-core==0.2.43
+langchain-community==0.2.19
+langchain-openai==0.1.25         # ChatOpenAI (로컬 vLLM/Qwen2-VL 호환 엔드포인트)
+langchain-qdrant==0.1.4          # vector_rag_search / text2sql few-shot
+langchain-huggingface==0.0.3     # bge-m3 임베딩
+qdrant-client==1.17.1
+sentence-transformers==5.4.1
+neo4j==6.2.0                     # graph_rag_search (Neo4j 지식 그래프)
 
-# 4주차에 추가 예정
-# neo4j
+# 매뉴얼 인덱싱은 Graph 레포 담당 (Backend는 읽기측만)
+# pymupdf
 
 # 6주차에 추가 예정
 # ragas
