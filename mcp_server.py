@@ -261,7 +261,7 @@ async def graph_rag_search(
     query: Annotated[str, Field(description="검색할 자연어 질의", min_length=1)],
     entities: Annotated[
         list[str], Field(description="관련 엔티티(부품/경고등/증상/DTC 등) 목록")
-    ] = [],
+    ] = None,
 ) -> str:
     """경고등·부품 등 관계형 정보를 Neo4j 지식 그래프에서 탐색한다."""
     return await graph_rag_service.graph_search(query, entities)
