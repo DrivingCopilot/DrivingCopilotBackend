@@ -1,6 +1,7 @@
 import base64
 import sqlite3
 import json
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Literal
@@ -9,6 +10,9 @@ from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
 from app.services import vehicle as vehicle_service
+from app.services import text2sql as text2sql_service
+from app.services import vector_rag as vector_rag_service
+from app.services import graph_rag as graph_rag_service
 from app.database import init_db, DB_PATH
 
 # 실제 카메라 하드웨어 연동 전 단계의 stub 프레임.
@@ -22,7 +26,15 @@ async def lifespan(server: FastMCP):
     yield
 
 
-mcp = FastMCP(name="vehicle-tools", lifespan=lifespan)
+# Transport: streamable-http(상주 HTTP 서버). host/port는 환경변수로 override.
+# 기본 엔드포인트: http://{MCP_HOST}:{MCP_PORT}/mcp
+# Backend FastAPI(REST)가 8000을 사용하므로 MCP 서버 기본 포트는 9000으로 분리.
+mcp = FastMCP(
+    name="vehicle-tools",
+    lifespan=lifespan,
+    host=os.getenv("MCP_HOST", "0.0.0.0"),
+    port=int(os.getenv("MCP_PORT", "9000")),
+)
 
 
 # ---- 1) 에어컨 / 히터 ----
@@ -225,5 +237,37 @@ async def execute_db(
     finally:
         con.close()
 
+
+# ---- 13) Text2SQL (자연어 → SQL 조회) ----
+@mcp.tool()
+async def text_to_sql_query(
+    query: Annotated[str, Field(description="차량 DB에 대한 자연어 질의", min_length=1)],
+) -> str:
+    """주행/정비/DTC/텔레메트리 등 구조화 데이터를 자연어로 질의하면 SQL을 생성·실행해 결과를 반환한다."""
+    return await text2sql_service.text_to_sql(query)
+
+
+# ---- 14) Vector RAG (매뉴얼 검색) ----
+@mcp.tool()
+async def vector_rag_search(
+    query: Annotated[str, Field(description="검색할 자연어 질의", min_length=1)],
+) -> str:
+    """차량 매뉴얼에서 벡터 검색(Qdrant)으로 관련 내용을 찾는다."""
+    return await vector_rag_service.vector_search(query)
+
+
+# ---- 15) Graph RAG (관계형 추론) ----
+@mcp.tool()
+async def graph_rag_search(
+    query: Annotated[str, Field(description="검색할 자연어 질의", min_length=1)],
+    entities: Annotated[
+        list[str], Field(description="관련 엔티티(부품/경고등/증상/DTC 등) 목록")
+    ] = None,
+) -> str:
+    """경고등·부품 등 관계형 정보를 Neo4j 지식 그래프에서 탐색한다."""
+    return await graph_rag_service.graph_search(query, entities)
+
+
 if __name__ == "__main__":
-    mcp.run()
+    # stdio → streamable-http 전환. Agent 측 mcp_client.py도 streamablehttp_client로 변경 필요.
+    mcp.run(transport="streamable-http")
