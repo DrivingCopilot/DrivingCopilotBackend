@@ -269,5 +269,8 @@ async def graph_rag_search(
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     # stdio → streamable-http 전환. Agent 측 mcp_client.py도 streamablehttp_client로 변경 필요.
+=======
+>>>>>>> 62b5faa (fix(mcp): MCP 서버가 streamable-http 대신 stdio로 뜨던 문제 수정)
     mcp.run(transport="streamable-http")
