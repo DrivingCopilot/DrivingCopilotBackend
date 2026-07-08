@@ -3,7 +3,6 @@ import sqlite3
 import json
 import os
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Annotated, Literal
 
 from mcp.server.fastmcp import FastMCP
@@ -13,11 +12,8 @@ from app.services import vehicle as vehicle_service
 from app.services import text2sql as text2sql_service
 from app.services import vector_rag as vector_rag_service
 from app.services import graph_rag as graph_rag_service
+from app.services.vehicle import CAMERA_STUB_FRAME as _CAMERA_STUB_FRAME
 from app.database import init_db, DB_PATH
-
-# 실제 카메라 하드웨어 연동 전 단계의 stub 프레임.
-# 추후 실 카메라 연동 시 이 파일 읽기 부분만 교체하면 된다.
-_CAMERA_STUB_FRAME = Path(__file__).parent / "data" / "camera_stub" / "sample_frame.jpg"
 
 
 @asynccontextmanager
