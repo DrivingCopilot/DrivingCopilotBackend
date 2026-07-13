@@ -1,16 +1,23 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import vehicle, rag, tools, chat
+from app.routers.vehicle import poll_vehicle_state
 from app.services.query_router import warmup as router_warmup
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 앱 시작 시 TF-IDF 모델 워밍업 (첫 요청 지연 방지)
     router_warmup()
+    poll_task = asyncio.create_task(poll_vehicle_state())
     yield
+    poll_task.cancel()
+    try:
+        await poll_task
+    except asyncio.CancelledError:
+        pass
 
 app = FastAPI(
     title="Driving Copilot API",
