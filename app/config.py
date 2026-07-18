@@ -26,7 +26,9 @@ QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 COLLECTION_NAME = os.getenv("COLLECTION_NAME", "vehicle_manuals")
 EMBED_MODEL_NAME = os.getenv("EMBED_MODEL_NAME", "BAAI/bge-m3")
 FEW_SHOT_K = int(os.getenv("FEW_SHOT_K", "3"))
-VECTOR_SEARCH_K = int(os.getenv("VECTOR_SEARCH_K", "5"))  # vector_rag_search top-k
+VECTOR_SEARCH_K = int(os.getenv("VECTOR_SEARCH_K", "5"))  # 최종 반환 개수 (reranker 이후)
+VECTOR_SEARCH_CANDIDATE_K = int(os.getenv("VECTOR_SEARCH_CANDIDATE_K", "20"))  # reranker 투입 전 1차 후보 개수
+RERANKER_MODEL_NAME = os.getenv("RERANKER_MODEL_NAME", "BAAI/bge-reranker-v2-m3")
 
 # ---------------------------------------------------------------------------
 # Neo4j (Graph RAG)
