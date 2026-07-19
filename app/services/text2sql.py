@@ -145,6 +145,28 @@ Your task is to convert the user's natural language question into a strictly val
     )
 
 
+def _first_statement(sql: str) -> str:
+    """문자열 리터럴 밖의 첫 세미콜론까지만 취해 단일 SQL 문장을 반환한다.
+
+    단순 split(";") 은 WHERE note = 'a;b' 처럼 리터럴 안에 세미콜론이 있으면
+    유효한 SQL을 절단한다. SQLite 문자열 리터럴은 작은따옴표로 감싸고 '' 로
+    이스케이프하므로, 따옴표 내부/외부를 추적하며 스캔한다.
+    """
+    in_str = False
+    i, n = 0, len(sql)
+    while i < n:
+        ch = sql[i]
+        if ch == "'":
+            if in_str and i + 1 < n and sql[i + 1] == "'":
+                i += 2  # '' 는 리터럴 안의 이스케이프된 작은따옴표
+                continue
+            in_str = not in_str
+        elif ch == ";" and not in_str:
+            return sql[:i]
+        i += 1
+    return sql
+
+
 def _self_consistency(query: str, table_info: str, few_shot_examples: str) -> str:
     """N개 SQL을 생성하고 다수결 투표로 최종 SQL을 선택한다."""
     sqls = []
@@ -154,10 +176,10 @@ def _self_consistency(query: str, table_info: str, few_shot_examples: str) -> st
             if sql:
                 # 소형 모델은 SQL 뒤에 코드펜스/설명을 덧붙이곤 한다.
                 # 1) 선행 ```sql/``` 펜스 제거 2) 첫 닫는 펜스 이후 잘라냄
-                # 3) 첫 세미콜론까지만 취해 단일 문장 보장 4) 공백 정규화
+                # 3) 리터럴 밖 첫 세미콜론까지만 취해 단일 문장 보장 4) 공백 정규화
                 cleaned = sql.strip().removeprefix("```sql").removeprefix("```")
                 cleaned = cleaned.split("```", 1)[0]
-                cleaned = cleaned.split(";", 1)[0]
+                cleaned = _first_statement(cleaned)
                 cleaned = " ".join(cleaned.strip().split())
                 if cleaned:
                     sqls.append(cleaned)
