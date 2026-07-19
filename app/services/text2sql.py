@@ -62,13 +62,13 @@ def _few_shot_sql(query: str) -> str:
     Qdrant/임베딩 모델이 없으면 빈 문자열로 graceful degrade.
     """
     try:
-        from langchain_huggingface import HuggingFaceEmbeddings
         from langchain_qdrant import QdrantVectorStore
-        from qdrant_client import QdrantClient
         from qdrant_client.http import models
 
-        embeddings = HuggingFaceEmbeddings(model_name=config.EMBED_MODEL_NAME)
-        client = QdrantClient(url=config.QDRANT_URL)
+        from app.services.qdrant import get_embeddings, get_qdrant_client
+
+        embeddings = get_embeddings()
+        client = get_qdrant_client()
         vectorstore = QdrantVectorStore(
             client=client,
             collection_name=config.COLLECTION_NAME,
@@ -152,9 +152,15 @@ def _self_consistency(query: str, table_info: str, few_shot_examples: str) -> st
         try:
             sql = _generate_sql(query, table_info, few_shot_examples)
             if sql:
-                # ```sql 등 마크다운 펜스 제거 + 공백 정규화
-                cleaned = sql.strip().removeprefix("```sql").removeprefix("```").removesuffix("```")
-                sqls.append(" ".join(cleaned.strip().split()))
+                # 소형 모델은 SQL 뒤에 코드펜스/설명을 덧붙이곤 한다.
+                # 1) 선행 ```sql/``` 펜스 제거 2) 첫 닫는 펜스 이후 잘라냄
+                # 3) 첫 세미콜론까지만 취해 단일 문장 보장 4) 공백 정규화
+                cleaned = sql.strip().removeprefix("```sql").removeprefix("```")
+                cleaned = cleaned.split("```", 1)[0]
+                cleaned = cleaned.split(";", 1)[0]
+                cleaned = " ".join(cleaned.strip().split())
+                if cleaned:
+                    sqls.append(cleaned)
         except Exception as e:
             logger.error("SQL 생성 오류: %s", e)
 

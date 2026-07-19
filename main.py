@@ -1,6 +1,12 @@
 import asyncio
 from contextlib import asynccontextmanager
 
+from dotenv import load_dotenv
+
+# app.* 를 import 하면 app.config 가 os.getenv 로 설정을 읽으므로,
+# 그 전에 .env 를 환경변수로 로드해야 QDRANT/NEO4J 설정이 반영된다.
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import vehicle, rag, tools, chat

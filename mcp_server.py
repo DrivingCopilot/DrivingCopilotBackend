@@ -5,6 +5,11 @@ import os
 from contextlib import asynccontextmanager
 from typing import Annotated, Literal
 
+from dotenv import load_dotenv
+
+# app.* import 전에 .env 를 로드해야 app.config 의 QDRANT/NEO4J 설정이 반영된다.
+load_dotenv()
+
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 

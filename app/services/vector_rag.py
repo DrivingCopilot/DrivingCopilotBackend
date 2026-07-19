@@ -21,13 +21,13 @@ _reranker = None  # 모듈 레벨 싱글톤 (CrossEncoder 로드 비용 절감).
 
 def _run_vector_search(query: str) -> list:
     """1차 Vector 검색. 리랭커 투입 전 후보 chunk(Document) 리스트를 반환한다."""
-    from langchain_huggingface import HuggingFaceEmbeddings
     from langchain_qdrant import QdrantVectorStore
-    from qdrant_client import QdrantClient
     from qdrant_client.http import models
 
-    embeddings = HuggingFaceEmbeddings(model_name=config.EMBED_MODEL_NAME)
-    client = QdrantClient(url=config.QDRANT_URL)
+    from app.services.qdrant import get_embeddings, get_qdrant_client
+
+    embeddings = get_embeddings()
+    client = get_qdrant_client()
     vectorstore = QdrantVectorStore(
         client=client,
         collection_name=config.COLLECTION_NAME,
