@@ -81,7 +81,7 @@ class TestRerankWithReranker:
 
         result = vector_rag._rerank("query", docs)
 
-        assert [d.page_content for d in result] == ["high", "mid", "low"]
+        assert [doc.page_content for doc, _ in result] == ["high", "mid", "low"]
 
     def test_rerank_pairs_pass_query_and_page_content(self, monkeypatch):
         docs = [_doc("low"), _doc("high"), _doc("mid")]
@@ -114,7 +114,7 @@ class TestRerankGracefulDegradation:
 
         result = vector_rag._rerank("query", docs)
 
-        assert result == docs
+        assert result == [(doc, None) for doc in docs]
 
 
 # ── vector_search: 전체 조립 (CANDIDATE_K → rerank → 최종 K 슬라이싱) ────────

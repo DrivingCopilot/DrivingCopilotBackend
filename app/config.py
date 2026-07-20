@@ -29,6 +29,9 @@ FEW_SHOT_K = int(os.getenv("FEW_SHOT_K", "3"))
 VECTOR_SEARCH_K = int(os.getenv("VECTOR_SEARCH_K", "5"))  # 최종 반환 개수 (reranker 이후)
 VECTOR_SEARCH_CANDIDATE_K = int(os.getenv("VECTOR_SEARCH_CANDIDATE_K", "20"))  # reranker 투입 전 1차 후보 개수
 RERANKER_MODEL_NAME = os.getenv("RERANKER_MODEL_NAME", "BAAI/bge-reranker-v2-m3")
+RERANK_SCORE_THRESHOLD: float = -2.0  # bge-reranker-v2-m3 raw logit, 임시 추정치
+                                        # 실측 없이 설정 — Gold Set 200건(Phase 3) 나오면
+                                        # 실제 정답/오답 청크 스코어 분포 보고 재조정 필요
 
 # ---------------------------------------------------------------------------
 # Neo4j (Graph RAG)
