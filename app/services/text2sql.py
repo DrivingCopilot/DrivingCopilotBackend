@@ -62,13 +62,13 @@ def _few_shot_sql(query: str) -> str:
     Qdrant/임베딩 모델이 없으면 빈 문자열로 graceful degrade.
     """
     try:
-        from langchain_huggingface import HuggingFaceEmbeddings
         from langchain_qdrant import QdrantVectorStore
-        from qdrant_client import QdrantClient
         from qdrant_client.http import models
 
-        embeddings = HuggingFaceEmbeddings(model_name=config.EMBED_MODEL_NAME)
-        client = QdrantClient(url=config.QDRANT_URL)
+        from app.services.qdrant import get_embeddings, get_qdrant_client
+
+        embeddings = get_embeddings()
+        client = get_qdrant_client()
         vectorstore = QdrantVectorStore(
             client=client,
             collection_name=config.COLLECTION_NAME,
@@ -145,6 +145,28 @@ Your task is to convert the user's natural language question into a strictly val
     )
 
 
+def _first_statement(sql: str) -> str:
+    """문자열 리터럴 밖의 첫 세미콜론까지만 취해 단일 SQL 문장을 반환한다.
+
+    단순 split(";") 은 WHERE note = 'a;b' 처럼 리터럴 안에 세미콜론이 있으면
+    유효한 SQL을 절단한다. SQLite 문자열 리터럴은 작은따옴표로 감싸고 '' 로
+    이스케이프하므로, 따옴표 내부/외부를 추적하며 스캔한다.
+    """
+    in_str = False
+    i, n = 0, len(sql)
+    while i < n:
+        ch = sql[i]
+        if ch == "'":
+            if in_str and i + 1 < n and sql[i + 1] == "'":
+                i += 2  # '' 는 리터럴 안의 이스케이프된 작은따옴표
+                continue
+            in_str = not in_str
+        elif ch == ";" and not in_str:
+            return sql[:i]
+        i += 1
+    return sql
+
+
 def _self_consistency(query: str, table_info: str, few_shot_examples: str) -> str:
     """N개 SQL을 생성하고 다수결 투표로 최종 SQL을 선택한다."""
     sqls = []
@@ -152,9 +174,15 @@ def _self_consistency(query: str, table_info: str, few_shot_examples: str) -> st
         try:
             sql = _generate_sql(query, table_info, few_shot_examples)
             if sql:
-                # ```sql 등 마크다운 펜스 제거 + 공백 정규화
-                cleaned = sql.strip().removeprefix("```sql").removeprefix("```").removesuffix("```")
-                sqls.append(" ".join(cleaned.strip().split()))
+                # 소형 모델은 SQL 뒤에 코드펜스/설명을 덧붙이곤 한다.
+                # 1) 선행 ```sql/``` 펜스 제거 2) 첫 닫는 펜스 이후 잘라냄
+                # 3) 리터럴 밖 첫 세미콜론까지만 취해 단일 문장 보장 4) 공백 정규화
+                cleaned = sql.strip().removeprefix("```sql").removeprefix("```")
+                cleaned = cleaned.split("```", 1)[0]
+                cleaned = _first_statement(cleaned)
+                cleaned = " ".join(cleaned.strip().split())
+                if cleaned:
+                    sqls.append(cleaned)
         except Exception as e:
             logger.error("SQL 생성 오류: %s", e)
 

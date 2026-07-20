@@ -22,6 +22,10 @@ SC_NUM_SAMPLES = int(os.getenv("SC_NUM_SAMPLES", "5"))
 # ---------------------------------------------------------------------------
 # Qdrant (Text2SQL few-shot 예시 검색용)
 # ---------------------------------------------------------------------------
+# 접속 모드는 app/services/qdrant.py 의 싱글톤 헬퍼가 결정한다.
+# QDRANT_PATH가 설정되면 로컬 파일 모드(별도 서버 불필요, 단일 워커 로컬 개발용),
+# 비어 있으면 QDRANT_URL(서버 모드, 동시 접근 안전 — 운영 권장)로 접속한다.
+QDRANT_PATH = os.getenv("QDRANT_PATH", "")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 COLLECTION_NAME = os.getenv("COLLECTION_NAME", "vehicle_manuals")
 EMBED_MODEL_NAME = os.getenv("EMBED_MODEL_NAME", "BAAI/bge-m3")

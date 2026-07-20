@@ -24,7 +24,27 @@ venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-### 2. 서버 2개 실행 (Mac/Windows 공통 명령어, 터미널만 따로)
+### 2. Qdrant 벡터 DB 실행 (서버 모드)
+
+벡터 RAG(차량 매뉴얼 검색)와 Text2SQL few-shot은 Qdrant 서버(6333)에 접속합니다.
+Docker로 서버를 띄웁니다.
+
+```bash
+docker compose up -d        # qdrant 컨테이너 기동 (6333/6334)
+docker compose ps           # 상태 확인
+```
+
+접속 모드는 `.env`로 제어합니다. 기본값은 **서버 모드**입니다.
+
+```dotenv
+QDRANT_PATH=                     # 비워두면 서버 모드
+QDRANT_URL=http://localhost:6333
+```
+
+> 파일 모드로 쓰려면 `QDRANT_PATH`에 로컬 저장소 경로를 넣으면 됩니다(서버 불필요).
+> 두 모드는 저장 포맷이 달라 데이터가 자동 공유되지 않습니다.
+
+### 3. 서버 2개 실행 (Mac/Windows 공통 명령어, 터미널만 따로)
 
 ```bash
 # 터미널 1 — REST API (8000, vehicle-state / camera-frame 등)
