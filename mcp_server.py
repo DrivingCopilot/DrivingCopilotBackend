@@ -41,13 +41,17 @@ mcp = FastMCP(
 # ---- 1) 에어컨 / 히터 ----
 @mcp.tool()
 async def control_climate(
-    temperature: Annotated[int, Field(description="설정 온도(℃, 16~32)", ge=16, le=32)],
     on: Annotated[bool, Field(description="에어컨 ON(True)/OFF(False)")] = True,
+    temperature: Annotated[
+        int | None, Field(description="설정 온도(℃, 16~32). 미지정 시 온도는 변경하지 않는다.", ge=16, le=32)
+    ] = None,
 ) -> str:
-    """차량 에어컨/히터를 켜거나 끄고 온도를 설정한다."""
+    """차량 에어컨/히터를 켜거나 끄고, 필요 시 온도를 설정한다."""
     vehicle_service.update_vehicle_state("ac_on", on)
-    vehicle_service.update_vehicle_state("ac_temperature", float(temperature))
-    return f"에어컨을 {'켜고' if on else '끄고'} 온도를 {temperature}℃로 설정했어요."
+    if temperature is not None:
+        vehicle_service.update_vehicle_state("ac_temperature", float(temperature))
+        return f"에어컨을 {'켜고' if on else '끄고'} 온도를 {temperature}℃로 설정했어요."
+    return f"에어컨을 {'켰어요' if on else '껐어요'}."
 
 
 # ---- 2) 네비게이션 ----
