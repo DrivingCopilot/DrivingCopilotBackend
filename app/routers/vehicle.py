@@ -25,19 +25,31 @@ async def _broadcast(state: VehicleState) -> None:
             await ws.send_text(payload)
         except Exception:
             dead.add(ws)
-    _ws_clients -= dead
+    _ws_clients.difference_update(dead)
+
+
+_HEARTBEAT_TICKS = 4  # 0.5s * 4 = 2s — 변경이 없어도 이 주기로 재전송해 클라이언트가 연결 생존을 확인하게 한다.
 
 
 async def poll_vehicle_state() -> None:
-    """vehicle_state.json 변경을 0.5초마다 감지해 WebSocket으로 브로드캐스트한다."""
+    """vehicle_state.json 변경을 0.5초마다 감지해 WebSocket으로 브로드캐스트한다.
+
+    상태 변경이 없어도 _HEARTBEAT_TICKS마다 현재 상태를 재전송한다 — uvicorn --reload
+    재시작이나 네트워크 순단처럼 onclose가 뜨지 않고 조용히 죽는 연결을, 프론트가
+    "일정 시간 메시지 없음"으로 감지해 재연결할 수 있게 하기 위함이다.
+    """
     last: dict | None = None
+    ticks_since_broadcast = 0
     while True:
         await asyncio.sleep(0.5)
+        ticks_since_broadcast += 1
         try:
             current = vehicle_service.get_vehicle_state()
             current_dict = current.model_dump()
-            if current_dict != last:
+            changed = current_dict != last
+            if changed or ticks_since_broadcast >= _HEARTBEAT_TICKS:
                 last = current_dict
+                ticks_since_broadcast = 0
                 await _broadcast(current)
         except Exception:
             logger.debug("vehicle state poll error", exc_info=True)
