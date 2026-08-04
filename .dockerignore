@@ -1,0 +1,29 @@
+# git / IDE
+.git/
+.gitignore
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+ENV/
+.pytest_cache/
+.ruff_cache/
+
+# 문서
+*.md
+Intern_Project_Plan.md
+Driving_Copilot_Plan.md
+
+# 테스트 — 런타임 이미지에 불필요(별도 CI에서 실행)
+tests/
+
+# 로컬 전용 설정
+.env
+
+# 런타임 상태 파일 — docker-compose에서 바인드 마운트로 주입한다
+vehicle_data.db
+vehicle_state.json

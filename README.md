@@ -58,6 +58,20 @@ python mcp_server.py
 `DrivingCopilotAgent`의 `.env`/`config.py`에 있는 `MCP_SERVER_URL` 기본값과 일치해야 하니
 포트를 바꿨다면 Agent 쪽 설정도 같이 맞춰주세요.
 
+**Docker로 실행 (대안)** — 위 네이티브 실행 대신 Docker Compose로 Qdrant + REST API + MCP 서버를
+한 번에 띄울 수 있습니다.
+```bash
+docker compose up -d --build
+```
+- `NEO4J_URI`/`OPENAI_BASE_URL` 기본값은 `host.docker.internal`을 통해 이 Docker 호스트 위에
+  네이티브(또는 별도 컨테이너)로 떠 있는 Neo4j(`DrivingCopilotGraph`)와 로컬 모델 서버
+  (`DrivingCopilotAgent`)를 가리킵니다 — 두 레포도 Docker화하면 `.env`에서 두 값만
+  해당 컨테이너 서비스명으로 덮어쓰면 됩니다(코드 변경 불필요).
+- `vehicle_data.db`/`vehicle_state.json`/`data/camera_stub`는 REST API와 MCP 서버 두
+  컨테이너가 파일로 상태를 공유하는 기존 설계라, 두 서비스에 같은 호스트 경로를
+  바인드 마운트해 상태를 공유합니다.
+- 개별 로그: `docker compose logs -f backend` / `docker compose logs -f mcp-server`
+
 ### 확인
 
 ```bash
