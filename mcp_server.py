@@ -1,4 +1,5 @@
 import base64
+import logging
 import sqlite3
 import json
 import os
@@ -21,9 +22,25 @@ from app.services.vehicle import CAMERA_STUB_FRAME as _CAMERA_STUB_FRAME
 from app.database import init_db, DB_PATH
 
 
+# root logger에 핸들러가 없으면 lifespan의 init_db/warm-up 로그가 컨테이너 로그에
+# 전혀 찍히지 않는다 — cold-start 제거 효과를 로그로 확인할 수 있어야 하므로 명시적으로 설정한다.
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
 @asynccontextmanager
 async def lifespan(server: FastMCP):
     init_db()
+    # 모델 cold-start 제거: 임베딩(bge-m3)·리랭커(bge-reranker-v2-m3)는 lazy 로드라
+    # 첫 vector_rag_search 호출이 ~12~21초(모델 로딩) 걸려 클라이언트 타임아웃을
+    # 유발했다(warm 상태는 ~1초). 기동 시 더미 검색으로 두 모델 + Qdrant 클라이언트를
+    # 미리 warm-up해, 실제 첫 질의부터 warm 경로를 타게 한다. 실패해도 서버는 계속 뜬다.
+    try:
+        logger.info("vector 경로 warm-up 시작(임베딩+리랭커+Qdrant 사전 로딩)...")
+        await vector_rag_service.vector_search("워밍업")
+        logger.info("vector 경로 warm-up 완료 — 첫 질의부터 warm 경로")
+    except Exception:
+        logger.exception("vector warm-up 실패(무시하고 계속 기동)")
     yield
 
 

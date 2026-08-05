@@ -1,3 +1,24 @@
+# docker-compose.yml — DrivingCopilotBackend
+#
+# REST API(:8000) + MCP 서버(:9000) + Qdrant(:6333)를 이 레포 안에서 함께 띄운다.
+# Neo4j(DrivingCopilotGraph 레포의 별도 compose 스택)와 로컬 모델 서버(DrivingCopilotAgent
+# 레포의 별도 compose 스택)는 이 레포 소유가 아니므로, host.docker.internal로 연결한다 —
+# 두 레포도 Docker로 띄운 뒤 .env에서 NEO4J_URI/OPENAI_BASE_URL만 해당 컨테이너
+# 서비스명으로 바꾸면 된다(코드 변경 불필요).
+#
+# vehicle_data.db / vehicle_state.json / data/camera_stub 는 REST API와 MCP 서버
+# 두 프로세스가 파일로 상태를 공유하는 기존 설계(app/services/vehicle.py 참고)라,
+# 두 서비스에 같은 호스트 경로를 바인드 마운트해 공유 상태를 유지한다.
+#
+# 위 세 경로는 .gitignore 대상이라 fresh clone엔 없다. 이 상태로 바로 up 하면 Docker가
+# 바인드 마운트 소스에 파일 대신 디렉터리를 만들어버려(IsADirectoryError /
+# sqlite3.OperationalError) 컨테이너는 뜨지만 REST API가 500을 낸다. 최초 1회 반드시:
+#   touch vehicle_data.db vehicle_state.json
+#   mkdir -p data/camera_stub
+#
+# 실행:
+#   docker compose up -d --build
+
 services:
   qdrant:
     image: qdrant/qdrant:latest
@@ -8,6 +29,54 @@ services:
     volumes:
       - qdrant_storage:/qdrant/storage
     restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    container_name: driving-copilot-backend
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment: &backend-env
+      QDRANT_URL: "http://qdrant:6333"
+      NEO4J_URI: ${NEO4J_URI:-bolt://host.docker.internal:7687}
+      NEO4J_USER: ${NEO4J_USER:-neo4j}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-password}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-http://host.docker.internal:11500/v1}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-anything-local-model-server-ignores-this-value}
+      LLM_MODEL: ${LLM_MODEL:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # Linux에서 host.docker.internal 해석용
+    volumes:
+      - ./vehicle_data.db:/app/vehicle_data.db
+      - ./vehicle_state.json:/app/vehicle_state.json
+      - ./data/camera_stub:/app/data/camera_stub
+    depends_on:
+      - qdrant
+
+  mcp-server:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    container_name: driving-copilot-mcp-server
+    command: ["python", "mcp_server.py"]
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      <<: *backend-env
+      MCP_HOST: "0.0.0.0"
+      MCP_PORT: "9000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./vehicle_data.db:/app/vehicle_data.db
+      - ./vehicle_state.json:/app/vehicle_state.json
+      - ./data/camera_stub:/app/data/camera_stub
+    depends_on:
+      - qdrant
 
 volumes:
   qdrant_storage:

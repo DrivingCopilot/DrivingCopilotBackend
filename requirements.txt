@@ -4,7 +4,7 @@ pydantic==2.13.3
 python-dotenv==1.0.1
 httpx==0.28.1
 websockets==12.0
-mcp[cli]>=1.27.0
+mcp[cli]>=1.27.0,<2.0.0  # 2.0.0에서 mcp.server.fastmcp / streamablehttp_client 경로가 바뀌어 상한 고정
 scikit-learn>=1.4.0
 numpy>=1.26.0
 
