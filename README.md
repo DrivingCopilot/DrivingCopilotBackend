@@ -60,6 +60,16 @@ python mcp_server.py
 
 **Docker로 실행 (대안)** — 위 네이티브 실행 대신 Docker Compose로 Qdrant + REST API + MCP 서버를
 한 번에 띄울 수 있습니다.
+
+> **최초 1회 필수**: `vehicle_data.db`/`vehicle_state.json`/`data/camera_stub`는 `.gitignore`
+> 대상이라 fresh clone엔 없습니다. 없는 채로 바로 up 하면 Docker가 바인드 마운트 소스에
+> 파일 대신 디렉터리를 만들어버려(`IsADirectoryError`/`sqlite3.OperationalError`) 컨테이너는
+> 뜨지만 REST API가 500을 냅니다. `docker compose up` 전에 먼저:
+> ```bash
+> touch vehicle_data.db vehicle_state.json
+> mkdir -p data/camera_stub
+> ```
+
 ```bash
 docker compose up -d --build
 ```

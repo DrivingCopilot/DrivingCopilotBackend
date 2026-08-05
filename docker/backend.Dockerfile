@@ -28,6 +28,20 @@ COPY main.py mcp_server.py ./
 EXPOSE 8000 9000
 
 RUN useradd --create-home --uid 1000 appuser
+
+# /app 자체가 root 소유(WORKDIR/COPY가 USER 전환 전에 실행됨)라 appuser가 SQLite
+# journal/wal 파일을 옆에 만들지 못해 init_db()가 "attempt to write a readonly
+# database"로 실패한다 — 디렉터리 소유권을 appuser로 넘겨야 한다.
+RUN chown appuser:appuser /app
+
+# vehicle_data.db/vehicle_state.json은 .gitignore 대상이라 fresh clone엔 없다. 이미지 안에
+# appuser 소유의 빈 파일로 미리 만들어둔다 — docker-compose로 실행할 때는 이 값이 바인드
+# 마운트로 덮이므로 호스트 쪽 파일도 반드시 먼저 존재해야 한다(없으면 Docker가 파일이
+# 아니라 디렉터리를 마운트해 IsADirectoryError/sqlite3.OperationalError가 난다). 자세한
+# 절차는 docker-compose.yml/README 참고.
+RUN touch vehicle_data.db vehicle_state.json && mkdir -p data/camera_stub \
+    && chown appuser:appuser vehicle_data.db vehicle_state.json data/camera_stub
+
 USER appuser
 
 # 기본값은 REST API. MCP 서버는 docker-compose의 command:로 override한다.

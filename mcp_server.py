@@ -22,6 +22,9 @@ from app.services.vehicle import CAMERA_STUB_FRAME as _CAMERA_STUB_FRAME
 from app.database import init_db, DB_PATH
 
 
+# root logger에 핸들러가 없으면 lifespan의 init_db/warm-up 로그가 컨테이너 로그에
+# 전혀 찍히지 않는다 — cold-start 제거 효과를 로그로 확인할 수 있어야 하므로 명시적으로 설정한다.
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
